@@ -11,10 +11,10 @@
 #include "../../routes/auth.hpp"
 
 // ────────────────────────────────────────────────────────────────────────────
-// ПОДКЛЮЧИТЕ СВОЙ ВАРИАНТ ЗДЕСЬ (замените одну строку).
+// ПОДКЛЮЧИТЕ СВОЙ ВАРИАНТ ЗДЕСЬ (замените одну строку). Подключила 
 // ────────────────────────────────────────────────────────────────────────────
-#include "variant_roi.hpp"
-// #include "variant_mine.hpp"
+//#include "variant_roi.hpp"
+#include "variant_mine.hpp"
 
 namespace Individual {
     using namespace std;
@@ -30,13 +30,30 @@ namespace Individual {
 
             auto in = TaskVariant::parse(req.body);
 
-            string err = TaskVariant::validate(in);
+           /*string err = TaskVariant::validate(in);
             if (!err.empty()) {
                 JObj o; o.str("error", err);
                 res.status = 400;
                 res.set_content(o.str(), "application/json");
                 return;
-            }
+            }*/
+           string err = TaskVariant::validate(in);
+            if (!err.empty()) {
+                 // JSON с ошибкой
+                 JObj o; o.str("error", err);
+                 string error_json = o.str();
+
+             db_run("INSERT INTO works (user_id,datetime,input_json,result_json) "
+            "VALUES (?,?,?,?);",
+             {to_string(uid), now_iso(), req.body, error_json});
+
+              write_log("VALIDATION_ERROR", "user=" + name + " error=" + err);
+
+            // 400 клиенту
+            res.status = 400;
+             res.set_content(error_json, "application/json");
+                return;
+    }
 
             auto out = TaskVariant::calculate(in);
             string result = TaskVariant::to_json(out);
